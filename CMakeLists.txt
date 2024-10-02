@@ -11,4 +11,6 @@ add_executable(clox src/main.c
         src/memory.h
         src/debug.c
         src/debug.h
+        src/value.c
+        src/value.h
 )
