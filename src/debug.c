@@ -6,8 +6,9 @@
 void disassemble_chunk(Chunk *chunk, const char *name) {
     printf("== %s ==\n", name);
 
-    for (int offset = 0; offset < chunk->count;) {
-        offset = disassemble_instruction(chunk, offset);
+    int rle_offset = 0;
+    for (int offset = 0, n = 1; offset < chunk->count;) {
+        offset = disassemble_instruction(chunk, offset, &rle_offset, &n);
     }
 }
 
@@ -24,21 +25,28 @@ int simple_instruction(const char *name, int offset) {
     return offset + 1;
 }
 
-int disassemble_instruction(Chunk *chunk, int offset) {
-    printf("%04d ", offset);
-    if (offset > 0 && chunk->lines[offset] == chunk->lines[offset - 1])
+int disassemble_instruction(Chunk *chunk, int code_offset, int *rle_offset, int *n) {
+    printf("%04d ", code_offset);
+    LineRLE *encodings = chunk->line_rles.encodings;
+    if (*n <= encodings[*rle_offset].n) {
+        // Print newline
+        printf("%4d ", encodings[*rle_offset].lineno);
+        // Move on to next rle
+        (*rle_offset)++;
+        *n = 1;
+    } else {
         printf("   | ");
-    else
-        printf("%4d ", chunk->lines[offset]);
+        (*n)++;
+    }
 
-    uint8_t instruction = chunk->code[offset];
+    uint8_t instruction = chunk->code[code_offset];
     switch (instruction) {
         case OP_CONSTANT:
-            return constant_instruction("OP_CONSTANT", chunk, offset);
+            return constant_instruction("OP_CONSTANT", chunk, code_offset);
         case OP_RETURN:
-            return simple_instruction("OP_RETURN", offset);
+            return simple_instruction("OP_RETURN", code_offset);
         default:
             printf("Unknown opcode %d\n", instruction);
-            return offset + 1;
+            return code_offset + 1;
     }
 }
